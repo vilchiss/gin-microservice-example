@@ -25,17 +25,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/xid"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 var (
-	recipes []Recipe
-	ctx     context.Context
-	err     error
-	client  *mongo.Client
+	recipes    []Recipe
+	ctx        context.Context
+	err        error
+	client     *mongo.Client
+	collection *mongo.Collection
 )
 
 func init() {
@@ -45,17 +47,18 @@ func init() {
 	if err = client.Ping(context.TODO(), readpref.Primary()); err != nil {
 		log.Fatal(err)
 	}
+	collection = client.Database(os.Getenv("MONGO_DATABASE")).Collection("recipes")
 	log.Println("Connected to MongoDB")
 }
 
 // swagger:parameters recipes newRecipe
 type Recipe struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Tags         []string  `json:"tags"`
-	Ingredients  []string  `json:"ingredients"`
-	Instructions []string  `json:"instructions"`
-	PublishedAt  time.Time `json:"published_at"`
+	ID           primitive.ObjectID `json:"id" bson:"_id"`
+	Name         string             `json:"name" bson:"name"`
+	Tags         []string           `json:"tags" bson:"tags"`
+	Ingredients  []string           `json:"ingredients" bson:"ingredients"`
+	Instructions []string           `json:"instructions" bson:"instructions"`
+	PublishedAt  time.Time          `json:"published_at" bson:"published_at"`
 }
 
 // swagger:operation POST /recipes recipes newRecipe
@@ -79,7 +82,7 @@ func NewRecipeHandler(c *gin.Context) {
 		return
 	}
 
-	recipe.ID = xid.New().String()
+	recipe.ID = primitive.NewObjectID()
 	recipe.PublishedAt = time.Now()
 	recipes = append(recipes, recipe)
 	c.JSON(http.StatusOK, recipe)
@@ -94,6 +97,23 @@ func NewRecipeHandler(c *gin.Context) {
 //  '200':
 //   description: Successful operation
 func ListRecipesHandler(c *gin.Context) {
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+
+		return
+	}
+	defer cursor.Close(ctx)
+
+	recipes := make([]Recipe, 0)
+	for cursor.Next(ctx) {
+		var recipe Recipe
+		cursor.Decode(&recipe)
+		recipes = append(recipes, recipe)
+	}
+
 	c.JSON(http.StatusOK, recipes)
 }
 
@@ -116,13 +136,23 @@ func ListRecipesHandler(c *gin.Context) {
 //  '404':
 //   description: Invalid recipe ID
 func UpdateRecipeHandler(c *gin.Context) {
-	id := c.Param("id")
 	var recipe Recipe
+
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+
+		return
+	}
 
 	if err := c.ShouldBindJSON(&recipe); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
+
+		return
 	}
 
 	index := -1
@@ -161,8 +191,16 @@ func UpdateRecipeHandler(c *gin.Context) {
 //  '404':
 //   description: Invalid recipe ID
 func DeleteRecipeHandler(c *gin.Context) {
-	id := c.Param("id")
 	index := -1
+
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+
+		return
+	}
 
 	for i := 0; i < len(recipes); i++ {
 		if recipes[i].ID == id {
