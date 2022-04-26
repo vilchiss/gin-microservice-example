@@ -84,7 +84,16 @@ func NewRecipeHandler(c *gin.Context) {
 
 	recipe.ID = primitive.NewObjectID()
 	recipe.PublishedAt = time.Now()
-	recipes = append(recipes, recipe)
+	_, err = collection.InsertOne(ctx, recipe)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error while inserting a new recipe",
+		})
+
+		return
+	}
+
 	c.JSON(http.StatusOK, recipe)
 }
 
