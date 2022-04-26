@@ -164,23 +164,26 @@ func UpdateRecipeHandler(c *gin.Context) {
 		return
 	}
 
-	index := -1
-	for i := 0; i < len(recipes); i++ {
-		if recipes[i].ID == id {
-			index = i
-		}
-	}
-
-	if index == -1 {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Recipe not found",
+	_, err = collection.UpdateOne(ctx,
+		bson.M{"_id": id},
+		bson.D{{"$set", bson.D{
+			{"name", recipe.Name},
+			{"instructions", recipe.Instructions},
+			{"ingredients", recipe.Ingredients},
+			{"tags", recipe.Tags},
+		}}})
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
 		})
+
+		return
 	}
 
-	recipe.ID = id
-	recipes[index] = recipe
-
-	c.JSON(http.StatusOK, recipe)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Recipe has been updated",
+	})
 }
 
 // swagger:operation DELETE /recipes/{id} recipes deleteRecipe
