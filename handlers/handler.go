@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"go-microservices-example/models"
 	"log"
@@ -75,24 +76,41 @@ func (handler *RecipesHandler) CreateRecipeHandler(c *gin.Context) {
 //  '200':
 //   description: Successful operation
 func (handler *RecipesHandler) ListRecipesHandler(c *gin.Context) {
-	cursor, err := handler.collection.Find(handler.ctx, bson.M{})
-	if err != nil {
+	value, err := handler.redisClient.Get("recipes").Result()
+	if err == redis.Nil {
+		log.Println("Request to MongoDB")
+
+		cursor, err := handler.collection.Find(handler.ctx, bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+
+			return
+		}
+		defer cursor.Close(handler.ctx)
+
+		recipes := make([]models.Recipe, 0)
+		for cursor.Next(handler.ctx) {
+			var recipe models.Recipe
+			cursor.Decode(&recipe)
+			recipes = append(recipes, recipe)
+		}
+
+		data, _ := json.Marshal(recipes)
+		handler.redisClient.Set("recipes", string(data), 0)
+
+		c.JSON(http.StatusOK, recipes)
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
-
-		return
+	} else {
+		log.Println("Request to Redis")
+		recipes := make([]models.Recipe, 0)
+		json.Unmarshal([]byte(value), &recipes)
+		c.JSON(http.StatusOK, recipes)
 	}
-	defer cursor.Close(handler.ctx)
-
-	recipes := make([]models.Recipe, 0)
-	for cursor.Next(handler.ctx) {
-		var recipe models.Recipe
-		cursor.Decode(&recipe)
-		recipes = append(recipes, recipe)
-	}
-
-	c.JSON(http.StatusOK, recipes)
 }
 
 // swagger:operation PUT /recipes/{id} recipes updateRecipe
