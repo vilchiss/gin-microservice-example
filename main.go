@@ -18,10 +18,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -234,45 +234,43 @@ func DeleteRecipeHandler(c *gin.Context) {
 	})
 }
 
-// swagger:operation GET /recipes/search recipes searchRecipe
-// Delete an existing recipe
+// swagger:operation GET /recipes/{id} recipes
+// Get a recipe by ID
 // ---
-// parameters:
-// - name: tag
-//   in: query
-//   description: tag of the recipe
-//   required: true
-//   type: string
 // produces:
 // - application/json
+// parameters:
+//   - name: id
+//     in: path
+//     description: recipe ID
+//     required: true
+//     type: string
 // responses:
-//  '200':
-//   description: Successful operation
-func SeachRecipeHandler(c *gin.Context) {
-	tag := c.Query("tag")
-	listOfRecipes := make([]Recipe, 0)
-
-	for i := 0; i < len(recipes); i++ {
-		found := false
-		for _, t := range recipes[i].Tags {
-			if strings.EqualFold(t, tag) {
-				found = true
-			}
+//     '200':
+//         description: Successful operation
+func GetRecipeByIDHandler(c *gin.Context) {
+	objectId, _ := primitive.ObjectIDFromHex(c.Param("id"))
+	cursor := collection.FindOne(ctx, bson.M{"_id": objectId})
+	var recipe Recipe
+	err := cursor.Decode(&recipe)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Recipe not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 
-		if found {
-			listOfRecipes = append(listOfRecipes, recipes[i])
-		}
+		return
 	}
 
-	c.JSON(http.StatusOK, listOfRecipes)
+	c.JSON(http.StatusOK, recipe)
 }
 
 func main() {
 	router := gin.Default()
 	router.POST("/recipes", NewRecipeHandler)
 	router.GET("/recipes", ListRecipesHandler)
-	router.GET("/recipes/search", SeachRecipeHandler)
+	router.GET("/recipes/:id", GetRecipeByIDHandler)
 	router.PUT("/recipes/:id", UpdateRecipeHandler)
 	router.DELETE("/recipes/:id", DeleteRecipeHandler)
 	router.Run()
