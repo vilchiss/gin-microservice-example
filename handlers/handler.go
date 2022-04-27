@@ -64,6 +64,9 @@ func (handler *RecipesHandler) CreateRecipeHandler(c *gin.Context) {
 		return
 	}
 
+	log.Println("Remove data from Redis")
+	handler.redisClient.Del("recipes")
+
 	c.JSON(http.StatusOK, recipe)
 }
 
@@ -151,7 +154,7 @@ func (handler *RecipesHandler) UpdateRecipeHandler(c *gin.Context) {
 		return
 	}
 
-	_, err = handler.collection.UpdateOne(handler.ctx,
+	result, err := handler.collection.UpdateOne(handler.ctx,
 		bson.M{"_id": id},
 		bson.D{{"$set", bson.D{
 			{"name", recipe.Name},
@@ -167,6 +170,17 @@ func (handler *RecipesHandler) UpdateRecipeHandler(c *gin.Context) {
 
 		return
 	}
+
+	if result.ModifiedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Recipe not found",
+		})
+
+		return
+	}
+
+	log.Println("Remove data from Redis")
+	handler.redisClient.Del("recipes")
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Recipe has been updated",
@@ -215,6 +229,9 @@ func (handler *RecipesHandler) DeleteRecipeHandler(c *gin.Context) {
 
 		return
 	}
+
+	log.Println("Remove data from Redis")
+	handler.redisClient.Del("recipes")
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Recipe has been deleted",
