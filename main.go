@@ -20,6 +20,7 @@ import (
 	"context"
 	"go-microservices-example/handlers"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -58,12 +59,23 @@ func init() {
 	recipesHandler = handlers.NewRecipesHandler(ctx, collection, redisClient)
 }
 
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.GetHeader("X-API-KEY") != os.Getenv("X_API_KEY") {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+		c.Next()
+	}
+}
+
 func main() {
 	router := gin.Default()
-	router.POST("/recipes", recipesHandler.CreateRecipeHandler)
-	router.GET("/recipes", recipesHandler.ListRecipesHandler)
-	router.GET("/recipes/:id", recipesHandler.GetRecipeByIDHandler)
-	router.PUT("/recipes/:id", recipesHandler.UpdateRecipeHandler)
-	router.DELETE("/recipes/:id", recipesHandler.DeleteRecipeHandler)
+	authorized := router.Group("/")
+	authorized.Use(AuthMiddleware())
+	authorized.POST("/recipes", recipesHandler.CreateRecipeHandler)
+	authorized.GET("/recipes", recipesHandler.ListRecipesHandler)
+	authorized.GET("/recipes/:id", recipesHandler.GetRecipeByIDHandler)
+	authorized.PUT("/recipes/:id", recipesHandler.UpdateRecipeHandler)
+	authorized.DELETE("/recipes/:id", recipesHandler.DeleteRecipeHandler)
 	router.Run()
 }
