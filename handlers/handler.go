@@ -7,7 +7,6 @@ import (
 	"go-microservices-example/models"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -44,14 +43,6 @@ func NewRecipesHandler(ctx context.Context, collection *mongo.Collection,
 //         description: Invalid input
 func (handler *RecipesHandler) CreateRecipeHandler(c *gin.Context) {
 	var recipe models.Recipe
-
-	if c.GetHeader("X-API-KEY") != os.Getenv("X_API_KEY") {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "API key not provided or invalid",
-		})
-
-		return
-	}
 
 	if err := c.ShouldBindJSON(&recipe); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

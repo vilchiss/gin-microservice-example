@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,6 +38,7 @@ var (
 	collection     *mongo.Collection
 	redisClient    *redis.Client
 	recipesHandler *handlers.RecipesHandler
+	authHandler    *handlers.AuthHandler
 )
 
 func init() {
@@ -57,23 +59,36 @@ func init() {
 	log.Println(status)
 
 	recipesHandler = handlers.NewRecipesHandler(ctx, collection, redisClient)
+	authHandler = &handlers.AuthHandler{}
 }
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.GetHeader("X-API-KEY") != os.Getenv("X_API_KEY") {
+		tokenValue := c.GetHeader("Authorization")
+		claims := &handlers.Claims{}
+
+		token, err := jwt.ParseWithClaims(tokenValue, claims, func(tkn *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
 		}
+
+		if token == nil || !token.Valid {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
 		c.Next()
 	}
 }
 
 func main() {
 	router := gin.Default()
+	router.GET("/recipes", recipesHandler.ListRecipesHandler)
+	router.POST("/signin", authHandler.SignInHandler)
 	authorized := router.Group("/")
 	authorized.Use(AuthMiddleware())
 	authorized.POST("/recipes", recipesHandler.CreateRecipeHandler)
-	authorized.GET("/recipes", recipesHandler.ListRecipesHandler)
 	authorized.GET("/recipes/:id", recipesHandler.GetRecipeByIDHandler)
 	authorized.PUT("/recipes/:id", recipesHandler.UpdateRecipeHandler)
 	authorized.DELETE("/recipes/:id", recipesHandler.DeleteRecipeHandler)

@@ -19,6 +19,7 @@ También se deben establecer las siguientes variables de entorno:
 
 - MONGO_URI="mongodb://username:password@localhost:27017"
 - MONGO_DATABASE=demo
+- JWT_SECRET=somesecret
 
 Para realizar pruebas de rendimiento del cache se utilizó la herramienta 
 `apache-benchmark` y se obtuvo la siguiente gráfica comparativa:
