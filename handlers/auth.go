@@ -22,11 +22,28 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
+// swagger:model jwtOutput
 type JWTOutput struct {
 	Token   string    `json:"token"`
 	Expires time.Time `json:"expires"`
 }
 
+// swagger:operation POST /signin auth signin
+// Authenticate user
+// ---
+// produces:
+// - application/json
+// responses:
+//     '200':
+//         description: Successful operation
+//         schema:
+//             "$ref": "#/definitions/jwtOutput"
+//     '401':
+//         description: Invalid username or password
+//     '404':
+//         description: Invalid data
+//     '500':
+//         description: Internal server error
 func (handler *AuthHandler) SignInHandler(c *gin.Context) {
 	var user models.User
 
@@ -72,6 +89,26 @@ func (handler *AuthHandler) SignInHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, jwtOutput)
 }
 
+// swagger:operation POST /refresh auth refresh
+// Refresh token
+// ---
+// parameters:
+// - name: Authorization
+//   in: header
+//   description: token
+//   required: true
+//   type: string
+// produces:
+// - application/json
+// responses:
+//     '200':
+//         description: Successful operation
+//     '401':
+//         description: Invalid token
+//     '404':
+//         description: Token is not expired yet
+//     '500':
+//         description: Internal server error
 func (handler *AuthHandler) RefreshHandler(c *gin.Context) {
 	tokenValue := c.GetHeader(AuthorizationHeader)
 	claims := &Claims{}

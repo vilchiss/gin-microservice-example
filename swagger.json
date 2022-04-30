@@ -50,49 +50,19 @@
         "parameters": [
           {
             "type": "string",
-            "x-go-name": "ID",
-            "name": "id",
-            "in": "query"
+            "description": "token",
+            "name": "Authorization",
+            "in": "header",
+            "required": true
           },
           {
-            "type": "string",
-            "x-go-name": "Name",
-            "name": "name",
-            "in": "query"
-          },
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-go-name": "Tags",
-            "name": "tags",
-            "in": "query"
-          },
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-go-name": "Ingredients",
-            "name": "ingredients",
-            "in": "query"
-          },
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-go-name": "Instructions",
-            "name": "instructions",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "format": "date-time",
-            "x-go-name": "PublishedAt",
-            "name": "published_at",
-            "in": "query"
+            "description": "recipe data",
+            "name": "Recipe",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Recipe"
+            }
           }
         ],
         "responses": {
@@ -105,22 +75,29 @@
         }
       }
     },
-    "/recipes/search": {
+    "/recipes/{id}": {
       "get": {
-        "description": "Delete an existing recipe",
+        "description": "Get a recipe by ID",
         "produces": [
           "application/json"
         ],
         "tags": [
           "recipes"
         ],
-        "operationId": "searchRecipe",
+        "operationId": "getRecipe",
         "parameters": [
           {
             "type": "string",
-            "description": "tag of the recipe",
-            "name": "tag",
-            "in": "query",
+            "description": "token",
+            "name": "Authorization",
+            "in": "header",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "recipe ID",
+            "name": "id",
+            "in": "path",
             "required": true
           }
         ],
@@ -129,9 +106,7 @@
             "description": "Successful operation"
           }
         }
-      }
-    },
-    "/recipes/{id}": {
+      },
       "put": {
         "description": "Update an existing recipe",
         "produces": [
@@ -144,15 +119,34 @@
         "parameters": [
           {
             "type": "string",
+            "description": "token",
+            "name": "Authorization",
+            "in": "header",
+            "required": true
+          },
+          {
+            "type": "string",
             "description": "ID of the recipe",
             "name": "id",
             "in": "path",
             "required": true
+          },
+          {
+            "description": "recipe data",
+            "name": "Recipe",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Recipe"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful operation"
+            "description": "Successful operation",
+            "schema": {
+              "$ref": "#/definitions/Recipe"
+            }
           },
           "400": {
             "description": "Invalid Input"
@@ -174,6 +168,13 @@
         "parameters": [
           {
             "type": "string",
+            "description": "token",
+            "name": "Authorization",
+            "in": "header",
+            "required": true
+          },
+          {
+            "type": "string",
             "description": "ID of the recipe",
             "name": "id",
             "in": "path",
@@ -189,6 +190,150 @@
           }
         }
       }
+    },
+    "/refresh": {
+      "post": {
+        "description": "Refresh token",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "operationId": "refresh",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "token",
+            "name": "Authorization",
+            "in": "header",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "404": {
+            "description": "Token is not expired yet"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/signin": {
+      "post": {
+        "description": "Authenticate user",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "operationId": "signin",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Password",
+            "name": "password",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Username",
+            "name": "username",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "schema": {
+              "$ref": "#/definitions/jwtOutput"
+            }
+          },
+          "401": {
+            "description": "Invalid username or password"
+          },
+          "404": {
+            "description": "Invalid data"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ObjectID": {
+      "type": "array",
+      "title": "ObjectID is the BSON ObjectID type.",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "go.mongodb.org/mongo-driver/bson/primitive"
+    },
+    "Recipe": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/ObjectID"
+        },
+        "ingredients": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Ingredients"
+        },
+        "instructions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Instructions"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "PublishedAt"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Tags"
+        }
+      },
+      "x-go-package": "go-microservices-example/models"
+    },
+    "jwtOutput": {
+      "type": "object",
+      "properties": {
+        "expires": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Expires"
+        },
+        "token": {
+          "type": "string",
+          "x-go-name": "Token"
+        }
+      },
+      "x-go-name": "JWTOutput",
+      "x-go-package": "go-microservices-example/handlers"
     }
   }
 }
