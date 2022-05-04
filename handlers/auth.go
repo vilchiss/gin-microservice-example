@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"go-microservices-example/models"
 	"net/http"
 	"os"
@@ -69,11 +70,11 @@ func (handler *AuthHandler) SignInHandler(c *gin.Context) {
 		return
 	}
 
-	h := sha256.New()
+	hash := sha256.Sum256([]byte(user.Password))
 
 	cursor := handler.collection.FindOne(handler.ctx, bson.M{
 		"username": user.Username,
-		"password": string(h.Sum([]byte(user.Password))),
+		"password": fmt.Sprintf("%x", hash),
 	})
 	if cursor.Err() != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
