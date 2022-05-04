@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"crypto/sha256"
 	"go-microservices-example/models"
 	"net/http"
 	"os"
@@ -8,6 +10,8 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -15,7 +19,10 @@ const (
 	EnvJWTSecret        = "JWT_SECRET"
 )
 
-type AuthHandler struct{}
+type AuthHandler struct {
+	collection *mongo.Collection
+	ctx        context.Context
+}
 
 type Claims struct {
 	Username string `json:"username"`
@@ -26,6 +33,13 @@ type Claims struct {
 type JWTOutput struct {
 	Token   string    `json:"token"`
 	Expires time.Time `json:"expires"`
+}
+
+func NewAuthHandler(ctx context.Context, collection *mongo.Collection) *AuthHandler {
+	return &AuthHandler{
+		collection: collection,
+		ctx:        ctx,
+	}
 }
 
 // swagger:operation POST /signin auth signin
@@ -55,7 +69,13 @@ func (handler *AuthHandler) SignInHandler(c *gin.Context) {
 		return
 	}
 
-	if user.Username != "admin" || user.Password != "password" {
+	h := sha256.New()
+
+	cursor := handler.collection.FindOne(handler.ctx, bson.M{
+		"username": user.Username,
+		"password": string(h.Sum([]byte(user.Password))),
+	})
+	if cursor.Err() != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "Invalid username or password",
 		})

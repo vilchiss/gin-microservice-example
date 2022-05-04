@@ -36,6 +36,7 @@ var (
 	err            error
 	client         *mongo.Client
 	collection     *mongo.Collection
+	collectionUser *mongo.Collection
 	redisClient    *redis.Client
 	recipesHandler *handlers.RecipesHandler
 	authHandler    *handlers.AuthHandler
@@ -49,6 +50,7 @@ func init() {
 	}
 	log.Println("Connected to MongoDB")
 	collection = client.Database(os.Getenv("MONGO_DATABASE")).Collection("recipes")
+	collectionUser = client.Database(os.Getenv("MONGO_DATABASE")).Collection("users")
 
 	redisClient = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -59,7 +61,7 @@ func init() {
 	log.Println(status)
 
 	recipesHandler = handlers.NewRecipesHandler(ctx, collection, redisClient)
-	authHandler = &handlers.AuthHandler{}
+	authHandler = handlers.NewAuthHandler(ctx, collectionUser)
 }
 
 func AuthMiddleware() gin.HandlerFunc {
