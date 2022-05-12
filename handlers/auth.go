@@ -12,6 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -108,6 +109,46 @@ func (handler *AuthHandler) SignInHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, jwtOutput)
+}
+
+// swagger:operation POST /signup auth signup
+// Register a new user
+// ---
+// produces:
+// - application/json
+// responses:
+//     '200':
+//         description: Successful operation
+//     '404':
+//         description: Invalid data
+//     '500':
+//         description: Internal server error
+func (handler *AuthHandler) SignUpHandler(c *gin.Context) {
+	var user models.User
+
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+
+		return
+	}
+
+	user.Password = fmt.Sprintf("%x", sha256.Sum256([]byte(user.Password)))
+	user.ID = primitive.NewObjectID()
+	user.RegisteredAt = time.Now()
+	_, err := handler.collection.InsertOne(handler.ctx, user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Could not crate user",
+		})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User registered",
+	})
 }
 
 // swagger:operation POST /refresh auth refresh
