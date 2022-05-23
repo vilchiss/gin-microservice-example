@@ -34,6 +34,18 @@ func NewRecipesHandler(ctx context.Context, collection *mongo.Collection,
 // swagger:operation POST /recipes recipes newRecipe
 // Create a new recipe
 // ---
+// parameters:
+// - name: Authorization
+//   in: header
+//   description: token
+//   required: true
+//   type: string
+// - name: Recipe
+//   in: body
+//   description: recipe data
+//   required: true
+//   schema:
+//      "$ref": "#/definitions/Recipe"
 // produces:
 // - application/json
 // responses:
@@ -120,16 +132,29 @@ func (handler *RecipesHandler) ListRecipesHandler(c *gin.Context) {
 // Update an existing recipe
 // ---
 // parameters:
+// - name: Authorization
+//   in: header
+//   description: token
+//   required: true
+//   type: string
 // - name: id
 //   in: path
 //   description: ID of the recipe
 //   required: true
 //   type: string
+// - name: Recipe
+//   in: body
+//   description: recipe data
+//   required: true
+//   schema:
+//      "$ref": "#/definitions/Recipe"
 // produces:
 // - application/json
 // responses:
 //  '200':
 //   description: Successful operation
+//   schema:
+//      "$ref": "#/definitions/Recipe"
 //  '400':
 //   description: Invalid Input
 //  '404':
@@ -191,6 +216,11 @@ func (handler *RecipesHandler) UpdateRecipeHandler(c *gin.Context) {
 // Delete an existing recipe
 // ---
 // parameters:
+// - name: Authorization
+//   in: header
+//   description: token
+//   required: true
+//   type: string
 // - name: id
 //   in: path
 //   description: ID of the recipe
@@ -238,12 +268,17 @@ func (handler *RecipesHandler) DeleteRecipeHandler(c *gin.Context) {
 	})
 }
 
-// swagger:operation GET /recipes/{id} recipes
+// swagger:operation GET /recipes/{id} recipes getRecipe
 // Get a recipe by ID
 // ---
 // produces:
 // - application/json
 // parameters:
+//   - name: Authorization
+//     in: header
+//     description: token
+//     required: true
+//     type: string
 //   - name: id
 //     in: path
 //     description: recipe ID
