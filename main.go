@@ -18,12 +18,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"go-microservices-example/handlers"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-contrib/sessions"
+	redisStore "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -53,7 +55,7 @@ func init() {
 	collectionUser = client.Database(os.Getenv("MONGO_DATABASE")).Collection("users")
 
 	redisClient = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     os.Getenv("REDIS_URI"),
 		Password: "",
 		DB:       0,
 	})
@@ -62,22 +64,19 @@ func init() {
 
 	recipesHandler = handlers.NewRecipesHandler(ctx, collection, redisClient)
 	authHandler = handlers.NewAuthHandler(ctx, collectionUser)
+
 }
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenValue := c.GetHeader("Authorization")
-		claims := &handlers.Claims{}
+		session := sessions.Default(c)
+		sessionToken := session.Get("token")
+		if sessionToken == nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"message": "Not logged",
+			})
 
-		token, err := jwt.ParseWithClaims(tokenValue, claims, func(tkn *jwt.Token) (interface{}, error) {
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		})
-		if err != nil {
-			c.AbortWithStatus(http.StatusUnauthorized)
-		}
-
-		if token == nil || !token.Valid {
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.Abort()
 		}
 
 		c.Next()
@@ -85,7 +84,12 @@ func AuthMiddleware() gin.HandlerFunc {
 }
 
 func main() {
+	store, err := redisStore.NewStore(10, "tcp", os.Getenv("REDIS_URI"), "", []byte(os.Getenv("REDIS_SECRET")))
+	if err != nil {
+		panic(fmt.Sprintf("failed to create redis instance: %s", err.Error()))
+	}
 	router := gin.Default()
+	router.Use(sessions.Sessions("recipes_api", store))
 	router.GET("/recipes", recipesHandler.ListRecipesHandler)
 	router.POST("/signin", authHandler.SignInHandler)
 	router.POST("/signup", authHandler.SignUpHandler)
