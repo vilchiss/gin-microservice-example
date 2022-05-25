@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/auth0-community/go-auth0"
 	"github.com/gin-contrib/sessions"
 	redisStore "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"gopkg.in/square/go-jose.v2"
 )
 
 var (
@@ -69,14 +71,22 @@ func init() {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		sessionToken := session.Get("token")
-		if sessionToken == nil {
-			c.JSON(http.StatusForbidden, gin.H{
-				"message": "Not logged",
-			})
+		var auth0Domain = "https://" + os.Getenv("AUTH0_DOMAIN") + "/"
+		client := auth0.NewJWKClient(
+			auth0.JWKClientOptions{URI: auth0Domain + ".well-known/jwks.json"},
+			nil,
+		)
+		configuration := auth0.NewConfiguration(client, []string{os.Getenv("AUTH0_API_IDENTIFIER")}, auth0Domain, jose.RS256)
+		validator := auth0.NewValidator(configuration, nil)
 
+		_, err := validator.ValidateRequest(c.Request)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Invalid token",
+			})
 			c.Abort()
+
+			return
 		}
 
 		c.Next()
