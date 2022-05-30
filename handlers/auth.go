@@ -47,7 +47,7 @@ func NewAuthHandler(ctx context.Context, collection *mongo.Collection) *AuthHand
 }
 
 // swagger:operation POST /signin auth signin
-// Authenticate user
+// Login with username and password
 // ---
 // produces:
 // - application/json
@@ -139,7 +139,7 @@ func (handler *AuthHandler) SignUpHandler(c *gin.Context) {
 }
 
 // swagger:operation POST /refresh auth refresh
-// Refresh token
+// Get new token in exchange for and old one
 // ---
 // parameters:
 // - name: Authorization
