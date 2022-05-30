@@ -206,10 +206,27 @@ func (handler *AuthHandler) RefreshHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, JWTOutput)
 }
 
+// swagger:operation POST /signout auth signout
+// Signout
+// ---
+// produces:
+// - application/json
+// responses:
+//     '200':
+//         description: Successful operation
+//     '500':
+//         description: Internal server error
 func (handler *AuthHandler) SignOutHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
-	session.Save()
+	err := session.Save()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Signed out... Bye!",
