@@ -193,7 +193,7 @@
     },
     "/refresh": {
       "post": {
-        "description": "Refresh token",
+        "description": "Get new token in exchange for and old one",
         "produces": [
           "application/json"
         ],
@@ -228,7 +228,7 @@
     },
     "/signin": {
       "post": {
-        "description": "Authenticate user",
+        "description": "Login with username and password",
         "produces": [
           "application/json"
         ],
@@ -237,6 +237,19 @@
         ],
         "operationId": "signin",
         "parameters": [
+          {
+            "$ref": "#/definitions/ObjectID",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "RegisteredAt",
+            "name": "registered_at",
+            "in": "query"
+          },
           {
             "type": "string",
             "x-go-name": "Password",
@@ -259,6 +272,49 @@
           },
           "401": {
             "description": "Invalid username or password"
+          },
+          "404": {
+            "description": "Invalid data"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/signout": {
+      "post": {
+        "description": "Signout",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "operationId": "signout",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/signup": {
+      "post": {
+        "description": "Register a new user",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "operationId": "signup",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
           },
           "404": {
             "description": "Invalid data"
@@ -334,6 +390,13 @@
       },
       "x-go-name": "JWTOutput",
       "x-go-package": "go-microservices-example/handlers"
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
     }
   }
 }
