@@ -50,6 +50,7 @@ var (
 	redisClient    *redis.Client
 	recipesHandler *handlers.RecipesHandler
 	authHandler    *handlers.AuthHandler
+	usersHandler   *handlers.UsersHandler
 )
 
 func init() {
@@ -72,6 +73,7 @@ func init() {
 
 	recipesHandler = handlers.NewRecipesHandler(ctx, collection, redisClient)
 	authHandler = handlers.NewAuthHandler(ctx, collectionUser)
+	usersHandler = handlers.NewUsersHandler(ctx, collectionUser)
 
 }
 
@@ -87,6 +89,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		_, err := validator.ValidateRequest(c.Request)
 		if err != nil {
+			log.Println(err)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"message": "Invalid token",
 			})
@@ -111,11 +114,14 @@ func main() {
 	router.POST("/signup", authHandler.SignUpHandler)
 	router.POST("/refresh", authHandler.RefreshHandler)
 	router.POST("/signout", authHandler.SignOutHandler)
-	authorized := router.Group("/")
-	authorized.Use(AuthMiddleware())
-	authorized.POST("/recipes", recipesHandler.CreateRecipeHandler)
-	authorized.GET("/recipes/:id", recipesHandler.GetRecipeByIDHandler)
-	authorized.PUT("/recipes/:id", recipesHandler.UpdateRecipeHandler)
-	authorized.DELETE("/recipes/:id", recipesHandler.DeleteRecipeHandler)
+	recipesRouter := router.Group("/")
+	recipesRouter.Use(AuthMiddleware())
+	recipesRouter.POST("/recipes", recipesHandler.CreateRecipeHandler)
+	recipesRouter.GET("/recipes/:id", recipesHandler.GetRecipeByIDHandler)
+	recipesRouter.PUT("/recipes/:id", recipesHandler.UpdateRecipeHandler)
+	recipesRouter.DELETE("/recipes/:id", recipesHandler.DeleteRecipeHandler)
+	usersRouter := router.Group("/")
+	usersRouter.Use(AuthMiddleware())
+	usersRouter.GET("/users/:username", usersHandler.GetUserInformationHandler)
 	router.Run()
 }

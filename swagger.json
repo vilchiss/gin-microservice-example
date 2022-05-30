@@ -324,6 +324,35 @@
           }
         }
       }
+    },
+    "/users/{username}": {
+      "get": {
+        "description": "Get a user information by username",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "users"
+        ],
+        "operationId": "getUserInformation",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "user name",
+            "name": "username",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Internal error"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
     }
   },
   "definitions": {
