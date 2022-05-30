@@ -8,6 +8,12 @@
 // Version: 1.0.0
 // Contact: Luis Oropeza <luis.oropeza@gmail.com> https://www.gitlab.com/luisfi
 //
+// securityDefinitions:
+//   api_key:
+//     type: apiKey
+//     in: header
+//     name: Authorization
+//
 // Consumes:
 // - application/json
 //

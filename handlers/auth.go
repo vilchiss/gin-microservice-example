@@ -47,7 +47,7 @@ func NewAuthHandler(ctx context.Context, collection *mongo.Collection) *AuthHand
 }
 
 // swagger:operation POST /signin auth signin
-// Authenticate user
+// Login with username and password
 // ---
 // produces:
 // - application/json
@@ -139,7 +139,7 @@ func (handler *AuthHandler) SignUpHandler(c *gin.Context) {
 }
 
 // swagger:operation POST /refresh auth refresh
-// Refresh token
+// Get new token in exchange for and old one
 // ---
 // parameters:
 // - name: Authorization
@@ -206,10 +206,27 @@ func (handler *AuthHandler) RefreshHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, JWTOutput)
 }
 
+// swagger:operation POST /signout auth signout
+// Signout
+// ---
+// produces:
+// - application/json
+// responses:
+//     '200':
+//         description: Successful operation
+//     '500':
+//         description: Internal server error
 func (handler *AuthHandler) SignOutHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
-	session.Save()
+	err := session.Save()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Signed out... Bye!",
